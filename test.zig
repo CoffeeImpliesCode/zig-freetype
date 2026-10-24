@@ -1,1 +1,1 @@
-pub const font_regular = @embedFile("res/JetBrainsMono-Regular.ttf");
+pub const font_regular = @embedFile("font_regular");

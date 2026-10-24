@@ -1,4 +1,5 @@
 const std = @import("std");
+const Translator = @import("translate_c").Translator;
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -8,6 +9,17 @@ pub fn build(b: *std.Build) !void {
     const module = b.addModule("freetype", .{ .root_source_file = b.path("main.zig") });
 
     const upstream = b.dependency("freetype", .{});
+    const translate_c = b.dependency("translate_c", .{});
+    const translated: Translator = .init(translate_c, .{
+        .name = "freetype",
+        .c_source_file = b.path("freetype-zig.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+    translated.addIncludePath(upstream.path("include"));
+    module.addImport("freetype_c", translated.mod);
+    const font = b.dependency("test_font", .{}).path("fonts/ttf/JetBrainsMono-Regular.ttf");
+    module.addAnonymousImport("font_regular", .{ .root_source_file = font });
     const lib = b.addLibrary(.{
         .name = "freetype",
         .linkage = .static,
@@ -99,6 +111,8 @@ pub fn build(b: *std.Build) !void {
                 .optimize = optimize,
             }),
         });
+        test_exe.root_module.addImport("freetype_c", translated.mod);
+        test_exe.root_module.addAnonymousImport("font_regular", .{ .root_source_file = font });
         test_exe.root_module.linkLibrary(lib);
         const tests_run = b.addRunArtifact(test_exe);
         const test_step = b.step("test", "Run tests");
